@@ -31,7 +31,7 @@ while parser.has_more_commands
   
   if (parser.command_type == Parser::A_COMMAND)
 
-    if parser.symbol =~ /^\d+$/ 
+    if parser.symbol =~ /^\d+$/ # if the symbol is a constant
       machine_codes.push('0' + binary_string(parser.symbol, 15))
     else
       unless symbol_table.contains? parser.symbol

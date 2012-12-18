@@ -47,11 +47,11 @@ class Parser
 
   def symbol
     # the "symbol" is the part of the command after the @ or the (
-    extract /^[@(](.*?)\)?$/
+    extract_from_command /^[@(](.*?)\)?$/
   end
 
   def dest
-    dest = extract /^(.*?)=.*$/
+    dest = extract_from_command /^(.*?)=.*$/
     unless dest.nil? or Code::DEST_CODES.has_key?(dest)
       raise "Unknown destination code: '#{dest}'" 
     end
@@ -68,7 +68,7 @@ class Parser
   end
 
   def jump
-    jump = extract /^.*;(\w*)$/
+    jump = extract_from_command /^.*;(\w*)$/
     unless jump.nil? or Code::JUMP_CODES.has_key?(jump)
       raise "Unknown jump code: " + jump 
     end
@@ -76,7 +76,7 @@ class Parser
   end
 
   private
-  def extract(pattern)
+  def extract_from_command(pattern)
     @command =~ pattern 
     $1
   end
