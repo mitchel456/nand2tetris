@@ -1,34 +1,41 @@
 class Parser
 
-  attr_reader :current_line
-
   A_COMMAND = 0
   C_COMMAND = 1
   L_COMMAND = 2
 
   def initialize(filename)
-    @lines = IO.readlines(filename)
-    @current_line = 0
+    @file = File.new(filename)
+    @command_no = 0
+    @command = nil
   end
 
   def has_more_commands
-    true unless @current_line >= @lines.count
+    not @file.eof?
   end
 
   def advance
-    @current_command = @lines[@current_line].gsub(/\/\/.*$/, '').strip
-    @current_line += 1 
-    # skip blank lines and comments
-    advance if @current_command.empty? or @current_command.start_with? '//'
+    line = @file.gets.gsub(/\/\/.*$/, '').strip
+    if line.empty?
+      advance 
+    else 
+      @command = line 
+      # do not increment the command number for a loop variable declaration
+      @command_no += 1 unless command_type == L_COMMAND
+    end
   end
 
   def reset
-    @current_command = nil
-    @current_line = 0
+    @file.rewind
+    @command_no = 0
+  end
+
+  def current_line
+    @command_no - 1
   end
 
   def command_type
-    case @current_command
+    case @command
     when /^@.*/
       A_COMMAND
     when /^\(.*/
@@ -39,6 +46,7 @@ class Parser
   end
 
   def symbol
+    # the "symbol" is the part of the command after the @ or the (
     extract /^[@(](.*?)\)?$/
   end
 
@@ -51,7 +59,7 @@ class Parser
   end
 
   def comp
-    comp = @current_command.sub(/^.*?=/, '')
+    comp = @command.sub(/^.*?=/, '')
     comp = comp.sub(/;\w*$/, '')
     unless Code::COMP_CODES.has_key?(comp)
       raise "Unknown compute code: '#{comp}'" 
@@ -69,7 +77,7 @@ class Parser
 
   private
   def extract(pattern)
-    @current_command =~ pattern 
+    @command =~ pattern 
     $1
   end
 
