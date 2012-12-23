@@ -2,6 +2,7 @@ class CodeWriter
 
 	def initialize(file)
 		@file = file
+		@jump_no = 0
 	end
 
 	def set_file_name(vm_filename)
@@ -11,9 +12,23 @@ class CodeWriter
 	def write_arithmetic(command)
 		case command
 		when 'add'
-			write_add
-		else
-			raise "Unknown arithmetic command"
+			write(['@SP', 'A=M-1', 'D=M', 'A=A-1', 'M=M+D', 'D=A', '@SP', 'M=D+1'])
+		when 'sub'
+			write(['@SP', 'A=M-1', 'D=M', 'A=A-1', 'M=M-D', 'D=A', '@SP', 'M=D+1'])
+		when 'neg'
+			write(['@SP', 'A=M-1', 'M=-M', 'D=A', '@SP', 'M=D+1'])
+		when 'eq'
+			write_comparison 'JEQ'
+		when 'gt'
+			write_comparison 'JGT'
+		when 'lt'
+			write_comparison 'JLT'
+		when 'and'
+			write(['@SP', 'A=M-1', 'D=M', 'A=A-1', 'M=D&M', 'D=A', '@SP', 'M=D+1'])
+		when 'or'
+			write(['@SP', 'A=M-1', 'D=M', 'A=A-1', 'M=D|M', 'D=A', '@SP', 'M=D+1'])
+		when 'not'
+			write(['@SP', 'A=M-1', 'M=!M', 'D=A', '@SP', 'M=D+1'])
 		end
 	end
 
@@ -21,13 +36,13 @@ class CodeWriter
 		if (command == 'push')
 			case segment
 			when 'local'
-				write(['@LCL', 'D=M', "@#{index}", 'A=D+A', 'D=M', '@SP', 'A=M', 'M=D', '@SP', 'M=M+1'])
+				write_push 'LCL', index
 			when 'argument'
-				write(['@ARG', 'D=M', "@#{index}", 'A=D+A', 'D=M', '@SP', 'A=M', 'M=D', '@SP', 'M=M+1'])
+				write_push 'ARG', index
 			when 'this'
-				write(['@THIS', 'D=M', "@#{index}", 'A=D+A', 'D=M', '@SP', 'A=M', 'M=D', '@SP', 'M=M+1'])
+				write_push 'THIS', index
 			when 'that'
-				write(['@THAT', 'D=M', "@#{index}", 'A=D+A', 'D=M', '@SP', 'A=M', 'M=D', '@SP', 'M=M+1'])
+				write_push 'THAT', index
 			when 'pointer'
 				write(['@THIS', 'D=A', "@#{index}", 'A=D+A', 'D=M', '@SP', 'A=M', 'M=D', '@SP', 'M=M+1'])
 			when 'temp'
@@ -40,32 +55,22 @@ class CodeWriter
 		elsif (command == 'pop')
 			case segment
 			when 'local'
-				write(['@LCL', 'D=M', "@#{index}", 'D=D+A', '@R5', 'M=D', '@SP', 'A=M', 'M=M-1', 'D=M', '@R5', 'A=M', 'M=D n'])
-				#write(['@SP', 'A=M', 'M=M-1', 'D=M', '@LCL', 'A=M', ]
+				write_pop 'LCL', index
+			when 'argument'
+				write_pop 'ARG', index
+			when 'this'
+				write_pop 'THIS', index
+			when 'that'
+				write_pop 'THAT', index
+			when 'pointer'
+				write_pop 'POINTER', index
+			when 'temp'
+				write_pop 'TEMP', index
+			when 'static'
+				write(['@SP', 'A=M-1', 'D=M', "@#{@current_vm_file}.#{index}", 'M=D', '@SP', 'M=M-1'])
 			end
 		end
 
-	end
-
-	private
-	def symbol_for_segment(segment)
-		case segment
-		when 'local'
-			'LCL'
-		when 'argument'
-			'ARG'
-		when 'this'
-			'THIS'
-		when 'that'
-			'THAT'
-		else
-			raise "Unknown segment"
-		end
-	end
-
-	private
-	def write_add
-		write(['@SP', 'A=M-1', 'D=M', 'A=A-1', 'M=M+D', 'D=A', '@SP', 'M=D+1'])
 	end
 
 	private
@@ -73,5 +78,51 @@ class CodeWriter
 		commands.each do |command|
 			@file.puts(command)
 		end
+	end
+
+	private
+	def write_push(segment, index)
+		write(["@#{segment}", 'D=M', "@#{index}", 'A=D+A', 'D=M', '@SP', 'A=M', 'M=D', '@SP', 'M=M+1'])
+	end
+
+	private
+	def write_pop(segment, index)
+		# pointer and temp both pop into the actual register, while the rest of the segments
+		# are pointed to by their registers
+		if segment == 'POINTER'
+			write(['@THIS', 'D=A'])
+		elsif segment == 'TEMP'
+			write(['@R5', 'D=A'])
+		else
+			write(["@#{segment}", 'D=M'])
+		end
+		write(["@#{index}", 'D=D+A', '@R5', 'M=D', '@SP', 'A=M-1', 'D=M', '@R5', 'A=M', 'M=D', '@SP', 'M=M-1'])
+	end
+
+	private
+	def write_comparison(jump_op)
+		write([
+			'@SP', 
+			'A=M-1', 
+			'D=M', 
+			'A=A-1', 
+			'D=M-D', 
+			"@comparison_true.#{@jump_no}", 
+			"D;#{jump_op}", 
+			'D=0', 
+			"@comparison_done.#{@jump_no}", 
+			'0;JMP', 
+			"(comparison_true.#{@jump_no})",
+			'D=-1',
+			"(comparison_done.#{@jump_no})",
+			'@SP',
+			'M=M-1',
+			'M=M-1',
+			'A=M',
+			'M=D',
+			'@SP',
+			'M=M+1'
+		])
+		@jump_no += 1
 	end
 end
