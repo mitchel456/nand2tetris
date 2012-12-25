@@ -3,7 +3,8 @@ require_relative 'code_writer'
 
 vm_file = ARGV[0]
 root_name = File.basename(vm_file, '.vm')
-code_writer = CodeWriter.new(File.open(File.dirname(vm_file) + '/' + root_name + '.asm', 'w'))
+product_dir = File.directory?(vm_file) ? vm_file : File.dirname(vm_file)
+code_writer = CodeWriter.new(File.open(product_dir + '/' + root_name + '.asm', 'w'))
 
 def parse(file, code_writer)
 	parser = Parser.new(File.new(file))
@@ -40,7 +41,6 @@ if File.file?(vm_file)
 elsif File.directory?(vm_file)
 	code_writer.write_init
 	vm_files = Dir.entries(vm_file).select {|file| file =~ /\.vm$/}
-	puts vm_files
 	vm_files.each do |file|
 		parse vm_file + '/' + file, code_writer
 	end

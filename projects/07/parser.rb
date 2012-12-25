@@ -61,13 +61,13 @@ class Parser
 		else
 			# any non-arithmetic command, the second word is the first arg
 			# i.e. "push local 1", "local" is the first arg
-			return @command[/^[\w\-\.]+ (\w+)/, 1]
+			return @command[/^[\w\-\.]+ ([\w\-\.]+)/, 1]
 		end
 	end
 
 	def arg2
 		# the second arg is the third word
 		# i.e. "push local 1", "1" is the second arg
-		return @command[/^[\w\-\.]+ [\w\-\.]+ (\w+)/, 1]
+		return @command[/^[\w\-\.]+ [\w\-\.]+ ([\w\-\.]+)/, 1]
 	end
 end

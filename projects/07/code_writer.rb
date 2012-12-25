@@ -14,10 +14,6 @@ class CodeWriter
 		@current_function_name = function_name
 	end
 
-	def end_function
-		@current_function_name = nil
-	end
-
 	def write_init
 		write(['@256', 'D=A', '@SP', 'M=D'])
 		write_call 'Sys.init', '0'
@@ -115,20 +111,19 @@ class CodeWriter
 		# LCL = SP
 		write(['@SP', 'D=M', '@LCL', 'M=D'])
 
-		write_goto function_name
-		write_label return_label
+		write(["@#{function_name}", '0;JMP'])
+		write(["(#{return_label})"])
 	end
 
 	def write_function(function_name, num_locals)
 		start_function function_name
-		write_label function_name
+		write(["(#{function_name})"])
 		num_locals.to_i.times do
 			write_push_pop('push', 'constant', 0)
 		end
 	end
 
 	def write_return
-		end_function
 		# R6 = LCL (temporary pointer to frame)
 		write(['@LCL', 'D=M', '@R6', 'M=D'])
 
@@ -158,10 +153,10 @@ class CodeWriter
 
 	private
 	def function_scoped_label(label)
-		if @function_name.nil?
+		if @current_function_name.nil?
 			label
 		else
-			@function_name + '$' + label
+			@current_function_name + '$' + label
 		end
 	end
 	
