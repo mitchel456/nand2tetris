@@ -21,7 +21,7 @@ class Parser
 
 	def advance
 		# a command is between one and three words at the start of a line
-		line = @file.gets[/^(\w+\s*){1,3}/]
+		line = @file.gets[/^([\w\-\.]+\s*){1,3}/]
 		if line.nil?
 			advance
 		else
@@ -31,7 +31,9 @@ class Parser
 
 	def command_type
 		case @command
-		when /^\w+$/ # only arithmetic commands are one word only
+		when /^return/
+			return C_RETURN
+		when /^[\w-]+$/ # only arithmetic commands are one word only
 			return C_ARITHMETIC
 		when /^push/
 			return C_PUSH
@@ -45,8 +47,6 @@ class Parser
 			return C_IF
 		when /^function/
 			return C_FUNCTION
-		when /^return/
-			return C_RETURN
 		when /^call/
 			return C_CALL
 		else
@@ -61,13 +61,13 @@ class Parser
 		else
 			# any non-arithmetic command, the second word is the first arg
 			# i.e. "push local 1", "local" is the first arg
-			return @command[/^\w+ (\w+)/, 1]
+			return @command[/^[\w\-\.]+ (\w+)/, 1]
 		end
 	end
 
 	def arg2
 		# the second arg is the third word
 		# i.e. "push local 1", "1" is the second arg
-		return @command[/^\w+ \w+ (\w+)/, 1]
+		return @command[/^[\w\-\.]+ [\w\-\.]+ (\w+)/, 1]
 	end
 end

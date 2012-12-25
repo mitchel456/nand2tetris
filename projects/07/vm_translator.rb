@@ -17,6 +17,20 @@ def parse(file, code_writer)
 			code_writer.write_push_pop('push', parser.arg1, parser.arg2)
 		when Parser::C_POP
 			code_writer.write_push_pop('pop', parser.arg1, parser.arg2)
+		when Parser::C_LABEL
+			code_writer.write_label(parser.arg1)
+		when Parser::C_GOTO
+			code_writer.write_goto(parser.arg1)
+		when Parser::C_IF
+			code_writer.write_if(parser.arg1)
+		when Parser::C_FUNCTION
+			code_writer.write_function(parser.arg1, parser.arg2)
+		when Parser::C_CALL
+			code_writer.write_call(parser.arg1, parser.arg2)
+		when Parser::C_RETURN
+			code_writer.write_return
+		else
+			raise "Unknown command: " + parser.command_type
 		end
 	end
 end
@@ -24,7 +38,9 @@ end
 if File.file?(vm_file)
 	parse vm_file, code_writer
 elsif File.directory?(vm_file)
+	code_writer.write_init
 	vm_files = Dir.entries(vm_file).select {|file| file =~ /\.vm$/}
+	puts vm_files
 	vm_files.each do |file|
 		parse vm_file + '/' + file, code_writer
 	end
