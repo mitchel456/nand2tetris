@@ -1,4 +1,5 @@
 *.tst
 *.cmp
 *.out
+projects/04/*/*.hack
 tools
