@@ -2,4 +2,5 @@
 *.cmp
 *.out
 projects/04/*/*.hack
+projects/05/*.hack
 tools
