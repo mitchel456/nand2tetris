@@ -1,5 +1,4 @@
 class Code
-
   DEST_CODES = {
     'M'   => '001',
     'D'   => '010',
@@ -7,7 +6,7 @@ class Code
     'A'   => '100',
     'AM'  => '101',
     'AD'  => '110',
-    'AMD' => '111' 
+    'AMD' => '111'
   }
 
   JUMP_CODES = {
@@ -64,7 +63,7 @@ class Code
     if COMP_CODES.has_key?(mnemonic)
      COMP_CODES[mnemonic]
     else
-      raise "Unknown comp code: " + mnemonic 
+      raise "Unknown comp code: " + mnemonic
     end
   end
 
@@ -75,5 +74,4 @@ class Code
       '000'
     end
   end
-
 end

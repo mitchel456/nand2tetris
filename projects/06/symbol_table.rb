@@ -1,8 +1,4 @@
-
 class SymbolTable
-
-  attr_reader :table
-
   def initialize
     @table = {
       'SP' => 0,
@@ -28,19 +24,27 @@ class SymbolTable
       'R15' => 15,
       'SCREEN' => 16384,
       'KBD' => 24576
-    } 
+    }
+    @next_ram_address = 16
   end
 
-  def add_entry(symbol, address)
-    @table[symbol] = address
+  def add_entry(symbol, address = nil)
+    unless address
+      address = next_ram_address
+      @next_ram_address +=1
+    end
+    table[symbol] = address
   end
 
   def contains?(symbol)
-    @table.has_key?(symbol)
+    table.has_key?(symbol)
   end
 
   def get_address(symbol)
-    @table[symbol]
+    table[symbol]
   end
 
+  private
+
+  attr_accessor :table, :next_ram_address
 end

@@ -1,84 +1,53 @@
+require_relative 'command'
+
 class Parser
+  attr_reader :current_command, :command_number
 
-  A_COMMAND = 0
-  C_COMMAND = 1
-  L_COMMAND = 2
-
-  def initialize(filename)
-    @file = File.new(filename)
-    @command_no = 0
-    @command = nil
+  def initialize(file)
+    @file = file
+    @command_number = 0
   end
 
-  def has_more_commands
-    not @file.eof?
+  def parse
+    reset
+    while has_more_commands?
+      advance
+      @command_number += 1 unless current_command.l_command?
+      yield @current_command
+    end
+  end
+
+  def has_more_commands?
+    !@file.eof?
   end
 
   def advance
-    line = @file.gets.gsub(/\/\/.*$/, '').strip
-    if line.empty?
-      advance 
-    else 
-      @command = line 
-      # do not increment the command number for a loop variable declaration
-      @command_no += 1 unless command_type == L_COMMAND
+    next_command = Command.new(@file.gets)
+    if next_command.comment? || next_command.empty?
+      advance
+    else
+      @current_command = next_command
     end
   end
 
   def reset
     @file.rewind
-    @command_no = 0
-  end
-
-  def current_line
-    @command_no - 1
-  end
-
-  def command_type
-    case @command
-    when /^@.*/
-      A_COMMAND
-    when /^\(.*/
-      L_COMMAND
-    else
-      C_COMMAND
-    end
+    @command_number = 0
   end
 
   def symbol
-    # the "symbol" is the part of the command after the @ or the (
-    extract_from_command /^[@(](.*?)\)?$/
+    @current_command.symbol
   end
 
   def dest
-    dest = extract_from_command /^(.*?)=.*$/
-    unless dest.nil? or Code::DEST_CODES.has_key?(dest)
-      raise "Unknown destination code: '#{dest}'" 
-    end
-    dest
+    @current_command.dest
   end
 
   def comp
-    comp = @command.sub(/^.*?=/, '')
-    comp = comp.sub(/;\w*$/, '')
-    unless Code::COMP_CODES.has_key?(comp)
-      raise "Unknown compute code: '#{comp}'" 
-    end
-    comp
+    @current_command.comp
   end
 
   def jump
-    jump = extract_from_command /^.*;(\w*)$/
-    unless jump.nil? or Code::JUMP_CODES.has_key?(jump)
-      raise "Unknown jump code: " + jump 
-    end
-    jump
+    @current_command.jump
   end
-
-  private
-  def extract_from_command(pattern)
-    @command =~ pattern 
-    $1
-  end
-
 end

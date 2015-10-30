@@ -1,51 +1,54 @@
-require '.\parser'
-require '.\code'
-require '.\symbol_table'
+require_relative 'parser'
+require_relative 'code'
+require_relative 'symbol_table'
 
-assembly_file = ARGV[0]
-root_name = File.basename(assembly_file, '.asm')
-parser = Parser.new(assembly_file)
+class Assembler
+  attr_reader :file, :parser, :symbol_table
 
-def binary_string(decimal, bits)
-  integer = decimal.to_i
-  binary = integer.to_s(2)
-  "%0#{bits}d" % binary
-end
-
-# first pass - build symbol table with labels
-symbol_table = SymbolTable.new
-while parser.has_more_commands
-  parser.advance
-  if (parser.command_type == Parser::L_COMMAND)
-    symbol_table.add_entry(parser.symbol, parser.current_line + 1) 
+  def initialize(infile_name, outfile_name = nil)
+    @file = File.new(infile_name)
+    @parser = Parser.new(@file)
+    @symbol_table = SymbolTable.new
+    @outfile_name = outfile_name
   end
-end
 
-# second pass - replace symbols with addresses
-next_ram_address = 16
-machine_codes = []
-parser.reset
-while parser.has_more_commands
-
-  parser.advance
-  
-  if (parser.command_type == Parser::A_COMMAND)
-
-    if parser.symbol =~ /^\d+$/ # if the symbol is a constant
-      machine_codes.push('0' + binary_string(parser.symbol, 15))
-    else
-      unless symbol_table.contains? parser.symbol
-        symbol_table.add_entry(parser.symbol, next_ram_address)
-        next_ram_address += 1 
+  def parse_for_labels
+    parser.parse do |command|
+      if command.l_command?
+        symbol_table.add_entry(command.symbol, parser.command_number)
       end
-      machine_codes.push('0' + binary_string(symbol_table.get_address(parser.symbol), 15))
     end
+  end
 
-  elsif (parser.command_type == Parser::C_COMMAND)
-    machine_codes.push('111' + Code.comp(parser.comp) + Code.dest(parser.dest) + Code.jump(parser.jump))
-   end
-end
+  def assemble
+    parse_for_labels
 
-File.open(File.dirname(assembly_file) + '/' + root_name + '.hack', 'w') do |file|
-  file.puts machine_codes
+    File.open(outfile_name, 'w') do |file|
+      parser.parse do |command|
+        if command.constant?
+          file.puts(address_command(parser.symbol))
+        elsif command.symbol?
+          symbol_table.add_entry(parser.symbol) unless symbol_table.contains?(parser.symbol)
+          symbol_address = symbol_table.get_address(parser.symbol)
+          file.puts(address_command(symbol_address))
+        elsif command.c_command?
+          file.puts(compute_command(command.comp, command.dest, command.jump))
+        end
+      end
+    end
+  end
+
+  private
+
+  def outfile_name
+    @outfile_name ||= File.join(File.dirname(infile_name), "#{File.basename(infile_name, '.asm')}.hack")
+  end
+
+  def address_command(address)
+    "%016d" % address.to_i.to_s(2)
+  end
+
+  def compute_command(comp, dest, jump)
+    "111#{Code.comp(comp)}#{Code.dest(dest)}#{Code.jump(jump)}"
+  end
 end
