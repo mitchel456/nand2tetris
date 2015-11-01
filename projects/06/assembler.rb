@@ -26,10 +26,10 @@ class Assembler
     File.open(outfile_name, 'w') do |file|
       parser.parse do |command|
         if command.constant?
-          file.puts(address_command(parser.symbol))
+          file.puts(address_command(command.symbol))
         elsif command.symbol?
-          symbol_table.add_entry(parser.symbol) unless symbol_table.contains?(parser.symbol)
-          symbol_address = symbol_table.get_address(parser.symbol)
+          symbol_table.add_entry(command.symbol) unless symbol_table.contains?(command.symbol)
+          symbol_address = symbol_table.get_address(command.symbol)
           file.puts(address_command(symbol_address))
         elsif command.c_command?
           file.puts(compute_command(command.comp, command.dest, command.jump))

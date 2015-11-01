@@ -34,20 +34,4 @@ class Parser
     @file.rewind
     @command_number = 0
   end
-
-  def symbol
-    @current_command.symbol
-  end
-
-  def dest
-    @current_command.dest
-  end
-
-  def comp
-    @current_command.comp
-  end
-
-  def jump
-    @current_command.jump
-  end
 end
